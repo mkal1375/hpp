@@ -1,9 +1,10 @@
+import hashlib
 import re
 from bs4 import BeautifulSoup as bs
 import requests
 from unidecode import unidecode
 
-from sql_command import read_urls
+from sql_command import read_urls, save_home, read_homes_hashes
 
 
 def price_to_int(price):
@@ -16,27 +17,26 @@ def price_to_int(price):
 
 def create_dataset(data):
     try:
-        dataset = []
-        data[1] = data[1].replace('تهران', '').replace('\u200c', ' ').strip()
-        dataset.append(data[0])
-        dataset.append(data[1])
+        dataset = dict()
+        data[1] = data[1].replace('تهران', '', 1).replace('\u200c', ' ').strip()
+        dataset['category'] = data[0]
+        dataset['neighbourhood'] = data[1]
 
         if 'هست' in data:
-            dataset.append(True)
+            dataset[' '] = True
         else:
-            dataset.append(False)
+            dataset['isCountryside'] = False
 
         if data[-1] == 'مجانی':
-            dataset.append(0)
+            dataset['fare'] = 0
         else:
-            dataset.append(price_to_int(data[-1]))
-
-        dataset.append(int(unidecode(data[-2])))
+            dataset['fare'] = price_to_int(data[-1])
+        dataset['area'] = int(unidecode(data[-2]))
 
         for item in data[3:-2]:
             if 'تومان' in item:
                 item = price_to_int(item)
-                dataset.append(item)
+                dataset['fee'] = item
                 break
 
         rooms= {
@@ -49,7 +49,7 @@ def create_dataset(data):
         }
         for item in data:
             if item in rooms.keys():
-                dataset.append(rooms[item])
+                dataset['rooms'] = rooms[item]
 
         if len(dataset) == 7:
             return dataset
@@ -58,18 +58,27 @@ def create_dataset(data):
     except Exception as e:
         return None
 
-datasets = []
+
+old_hashes = read_homes_hashes()
+def save(home):
+    hash = hashlib.sha256(str(home).encode('utf-8')).hexdigest()
+    if hash not in old_hashes:
+        home['hash'] = hash
+        save_home(home)
+        return True
+    else:
+        return False
 
 
 def main():
     #  Get all saved urls.
     urls = read_urls()
-    for url in urls[:20]:
+    for url in urls[:5]:
         response = requests.get(url)
         soup = bs(response.content, 'html.parser')
         soup = soup.find('body')
         items = [item.text for item in soup.select('.value')][2:]
-        dataset = create_dataset(items)
-        if dataset:
-            datasets.append(dataset)
+        home = create_dataset(items)
+        if home is not None:
+            save(home)
 main()
