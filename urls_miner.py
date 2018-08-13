@@ -5,6 +5,9 @@ from urllib.parse import urljoin
 from selenium import webdriver
 from bs4 import BeautifulSoup as bs
 
+from sql_command import read_urls, save_url
+
+
 def main():
     old_links = read_urls()
     browser = webdriver.Firefox()
@@ -21,6 +24,6 @@ def main():
         home_link = re.search(r'\/([\w\-]+)$', home_link).group(1)
         home_link = urljoin('http://divar.ir/v/', home_link)
         if home_link not in old_links:
-            save(home_link)
+            save_url(home_link)
 
 main()

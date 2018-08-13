@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup as bs
 import requests
 from unidecode import unidecode
 
-from sql_command import read_urls, save_home, read_homes_hashes
+from sql_command import read_urls, save_home, read_homes_hashes, tik_url
 
 
 def price_to_int(price):
@@ -81,4 +81,5 @@ def main():
         home = create_dataset(items)
         if home is not None:
             save(home)
+        tik_url(url)
 main()
